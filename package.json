@@ -26,6 +26,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@nestjs/common": "^12.6.0",
     "@nestjs/config": "^12.1.1",
