@@ -1,0 +1,236 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  name           String
+  phone          String
+  passwordHash   String
+  role           Role           @default(STUDENT)
+  isBlocked      Boolean        @default(false)
+  failedLogins   Int            @default(0)
+  lockoutUntil   DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  refreshTokens  RefreshToken[]
+  enrollments    Enrollment[]
+  accessRequests AccessRequest[]
+  videoProgress  VideoProgress[]
+  watchSessions  WatchSession[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model RefreshToken {
+  id               String    @id @default(uuid())
+  userId           String
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  replacedByToken  String?
+  createdAt        DateTime  @default(now())
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Course {
+  id             String          @id @default(uuid())
+  title          String
+  description    String
+  thumbnail      String?
+  price          Float           @default(0.0)
+  status         CourseStatus    @default(DRAFT)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  videos         Video[]
+  enrollments    Enrollment[]
+  accessRequests AccessRequest[]
+  watchSessions  WatchSession[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Video {
+  id             String          @id @default(uuid())
+  courseId       String
+  title          String
+  description    String?
+  order          Int             @default(0)
+  duration       Float           @default(0.0) // seconds
+  storageKey     String
+  mimeType       String          @default("video/mp4")
+  fileSize       Float           @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  videoAccesses  VideoAccess[]
+  progress       VideoProgress[]
+  watchSessions  WatchSession[]
+
+  @@index([courseId])
+  @@index([order])
+}
+
+model Enrollment {
+  id             String           @id @default(uuid())
+  userId         String
+  courseId       String
+  status         EnrollmentStatus @default(ACTIVE)
+  grantedBy      String?          // admin user id or "SYSTEM"
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  videoAccesses  VideoAccess[]
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+}
+
+model VideoAccess {
+  id             String      @id @default(uuid())
+  enrollmentId   String
+  videoId        String
+  isAllowed      Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  video          Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, videoId])
+  @@index([enrollmentId])
+  @@index([videoId])
+}
+
+model AccessRequest {
+  id             String        @id @default(uuid())
+  userId         String
+  courseId       String
+  amount         Float
+  senderNumber   String
+  trxId          String        @unique
+  status         RequestStatus @default(PENDING)
+  reviewedBy     String?       // admin user id
+  rejectReason   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+  @@index([trxId])
+  @@index([senderNumber])
+}
+
+model VideoProgress {
+  id             String    @id @default(uuid())
+  userId         String
+  videoId        String
+  lastPosition   Float     @default(0.0) // current playback position in seconds
+  watchedSeconds Float     @default(0.0) // cumulative watched seconds
+  completed      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video          Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@index([completed])
+}
+
+model WatchSession {
+  id             String    @id @default(uuid())
+  userId         String
+  videoId        String
+  courseId       String
+  date           DateTime  @db.Date
+  watchedSeconds Float     @default(0.0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video          Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  course         Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId, date])
+  @@index([userId, date])
+  @@index([courseId])
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorEmail String?
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+}
