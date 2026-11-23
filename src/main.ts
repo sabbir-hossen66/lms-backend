@@ -16,8 +16,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 4000;
-  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+  const port = Number(process.env.PORT) || configService.get<number>('PORT') || 4000;
+  const frontendUrl = configService.get<string>('FRONTEND_URL') || 'https://sabbir-lms.vercel.app';
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
 
   // Security Headers
@@ -95,8 +95,8 @@ async function bootstrap() {
     logger.log(`Swagger documentation available at http://localhost:${port}/api/docs`);
   }
 
-  await app.listen(port);
-  logger.log(`Backend server successfully running on port ${port}`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`Backend server successfully running on port ${port} (0.0.0.0)`);
 }
 
 bootstrap();
