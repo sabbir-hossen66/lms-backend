@@ -119,7 +119,7 @@ export class VideosService {
       throw new NotFoundException('Video not found');
     }
 
-    if (video.storageKey) {
+    if (video.storageKey && !video.storageKey.startsWith('http://') && !video.storageKey.startsWith('https://')) {
       await this.storageService.deleteFile(video.storageKey);
     }
 
@@ -177,6 +177,10 @@ export class VideosService {
 
     // Check active access on EVERY stream request
     await this.assertAccess(video.courseId, video.id, user);
+
+    if (video.storageKey.startsWith('http://') || video.storageKey.startsWith('https://')) {
+      return res.redirect(video.storageKey);
+    }
 
     let start: number | undefined;
     let end: number | undefined;

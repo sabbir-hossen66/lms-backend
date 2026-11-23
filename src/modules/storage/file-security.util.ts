@@ -3,7 +3,14 @@ import * as path from 'path';
 import { UploadedFileInput } from './storage.interface';
 
 export class FileSecurityUtil {
-  private static readonly ALLOWED_VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.mkv']);
+  private static readonly ALLOWED_VIDEO_EXTS = new Set([
+    '.mp4',
+    '.webm',
+    '.mov',
+    '.mkv',
+    '.m4v',
+    '.avi',
+  ]);
   private static readonly ALLOWED_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
   private static readonly ALLOWED_VIDEO_MIMES = new Set([
@@ -11,6 +18,12 @@ export class FileSecurityUtil {
     'video/webm',
     'video/quicktime',
     'video/x-matroska',
+    'video/x-m4v',
+    'video/mov',
+    'video/x-quicktime',
+    'video/avi',
+    'video/x-msvideo',
+    'application/octet-stream',
   ]);
 
   private static readonly ALLOWED_IMAGE_MIMES = new Set([

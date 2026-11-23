@@ -12,10 +12,15 @@ import {
   UploadedFile,
   UseGuards,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import * as fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
@@ -43,11 +48,45 @@ export class VideosController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max video size
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const dest = path.resolve(process.cwd(), 'uploads', 'videos');
+          if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+          cb(null, dest);
+        },
+        filename: (req, file, cb) => {
+          const ext = path.extname(file.originalname).toLowerCase() || '.mp4';
+          cb(null, `${uuidv4()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB limit
+      fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const allowedExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v', '.avi'];
+        if (allowedExts.includes(ext)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              `Unsupported format: ${ext}. Supported: mp4, webm, mov, mkv`,
+            ),
+            false,
+          );
+        }
+      },
     }),
   )
-  async uploadVideo(@UploadedFile() file: UploadedFileInput) {
-    return this.videosService.uploadVideo(file);
+  async uploadVideo(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No video file provided or file format unsupported');
+    }
+
+    return {
+      storageKey: `videos/${file.filename}`,
+      fileSize: file.size,
+      mimeType: file.mimetype || 'video/mp4',
+      duration: 0,
+    };
   }
 
   @Roles(Role.ADMIN)
