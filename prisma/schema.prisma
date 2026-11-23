@@ -76,6 +76,7 @@ model Course {
   thumbnail      String?
   price          Float           @default(0.0)
   status         CourseStatus    @default(DRAFT)
+  contentStatus  String          @default("ONGOING") // "ONGOING" | "COMPLETED"
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -95,6 +96,7 @@ model Video {
   description    String?
   thumbnailUrl   String?
   isFreePreview  Boolean         @default(false)
+  moduleName     String          @default("Module 1: Getting Started")
   order          Int             @default(0)
   duration       Float           @default(0.0) // seconds
   storageKey     String

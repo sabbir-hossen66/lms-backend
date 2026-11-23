@@ -27,6 +27,11 @@ export class CreateVideoDto {
   @IsOptional()
   isFreePreview?: boolean;
 
+  @ApiPropertyOptional({ example: 'Module 1: Getting Started' })
+  @IsString()
+  @IsOptional()
+  moduleName?: string;
+
   @ApiProperty({ example: 1 })
   @IsNumber()
   @Min(0)

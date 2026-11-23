@@ -100,6 +100,9 @@ export class CoursesService {
             id: true,
             title: true,
             description: true,
+            thumbnailUrl: true,
+            isFreePreview: true,
+            moduleName: true,
             order: true,
             duration: true,
             createdAt: true,
@@ -152,7 +155,7 @@ export class CoursesService {
     // Attach locked state and progress
     const videosWithAccess = course.videos.map((v, idx) => ({
       ...v,
-      isLocked: !isEnrolled && idx > 0, // allow first video as preview if not enrolled
+      isLocked: !isEnrolled && idx > 0 && !v.isFreePreview,
       progress: userProgressMap[v.id] || null,
     }));
 
@@ -173,6 +176,7 @@ export class CoursesService {
         price: dto.price,
         thumbnail: dto.thumbnail,
         status: dto.status || CourseStatus.DRAFT,
+        contentStatus: dto.contentStatus || 'ONGOING',
       },
     });
 
@@ -203,6 +207,7 @@ export class CoursesService {
         ...(dto.price !== undefined && { price: dto.price }),
         ...(dto.thumbnail !== undefined && { thumbnail: dto.thumbnail }),
         ...(dto.status && { status: dto.status }),
+        ...(dto.contentStatus && { contentStatus: dto.contentStatus }),
       },
     });
 

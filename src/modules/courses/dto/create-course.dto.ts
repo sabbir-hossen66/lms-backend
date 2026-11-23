@@ -29,4 +29,9 @@ export class CreateCourseDto {
   @IsEnum(CourseStatus)
   @IsOptional()
   status?: CourseStatus;
+
+  @ApiPropertyOptional({ example: 'ONGOING', enum: ['ONGOING', 'COMPLETED'] })
+  @IsString()
+  @IsOptional()
+  contentStatus?: string;
 }
