@@ -12,18 +12,18 @@ async function main() {
 
   // 1. Create Admin
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@lms.local' },
+    where: { email: 'sabbir.ms2000@gmail.com' },
     update: {
-      name: 'Super Admin',
-      phone: '+8801700000001',
+      name: 'Sabbir Hossen',
+      phone: '+8801783780066',
       role: Role.ADMIN,
       passwordHash: adminPasswordHash,
       isBlocked: false,
     },
     create: {
-      email: 'admin@lms.local',
-      name: 'Super Admin',
-      phone: '+8801700000001',
+      email: 'sabbir.ms2000@gmail.com',
+      name: 'Sabbir Hossen',
+      phone: '+8801783780066',
       role: Role.ADMIN,
       passwordHash: adminPasswordHash,
       isBlocked: false,
@@ -99,9 +99,10 @@ async function main() {
 
   // 5. Default Settings
   const defaultSettings = [
-    { key: 'bkash_number', value: '01712345678' },
+    { key: 'bkash_number', value: '01783780066' },
+    { key: 'admin_name', value: 'Sabbir Hossen' },
     { key: 'site_name', value: 'Antigravity LMS' },
-    { key: 'support_email', value: 'support@lms.local' },
+    { key: 'support_email', value: 'sabbir.ms2000@gmail.com' },
   ];
 
   for (const s of defaultSettings) {

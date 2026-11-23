@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Body,
   Param,
   Query,
   UseGuards,
@@ -13,6 +14,7 @@ import { UsersService } from './users.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UpdateRoleDto } from './dto/update-role.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -22,16 +24,18 @@ export class UsersController {
 
   @Roles(Role.ADMIN)
   @Get('students')
-  @ApiOperation({ summary: 'Admin list all students with pagination & search' })
+  @ApiOperation({ summary: 'Admin list all users with pagination, role filter & search' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'role', required: false, enum: Role })
   async findAllStudents(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('search') search?: string,
+    @Query('role') role?: Role,
   ) {
-    return this.usersService.findAllStudents(page, limit, search);
+    return this.usersService.findAllStudents(page, limit, search, role);
   }
 
   @Roles(Role.ADMIN)
@@ -49,5 +53,16 @@ export class UsersController {
     @CurrentUser('id') adminId: string,
   ) {
     return this.usersService.toggleBlockStatus(id, adminId);
+  }
+
+  @Roles(Role.ADMIN)
+  @Patch(':id/role')
+  @ApiOperation({ summary: 'Admin promote/demote user role (STUDENT <-> ADMIN)' })
+  async updateRole(
+    @Param('id') id: string,
+    @Body() dto: UpdateRoleDto,
+    @CurrentUser('id') adminId: string,
+  ) {
+    return this.usersService.updateUserRole(id, dto.role, adminId);
   }
 }

@@ -8,14 +8,15 @@ export class SettingsService {
   async getPublicSettings() {
     const settings = await this.prisma.setting.findMany({
       where: {
-        key: { in: ['bkash_number', 'site_name', 'support_email', 'site_tagline'] },
+        key: { in: ['bkash_number', 'site_name', 'support_email', 'site_tagline', 'admin_name'] },
       },
     });
 
     const result: Record<string, string> = {
-      bkash_number: '01712345678',
+      bkash_number: '01783780066',
       site_name: 'Antigravity LMS',
-      support_email: 'support@lms.local',
+      admin_name: 'Sabbir Hossen',
+      support_email: 'sabbir.ms2000@gmail.com',
     };
 
     settings.forEach((s) => {
