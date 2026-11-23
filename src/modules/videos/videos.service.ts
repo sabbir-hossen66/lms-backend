@@ -56,6 +56,8 @@ export class VideosService {
         courseId: dto.courseId,
         title: dto.title.trim(),
         description: dto.description?.trim(),
+        thumbnailUrl: dto.thumbnailUrl,
+        isFreePreview: dto.isFreePreview || false,
         order: dto.order,
         duration: dto.duration || 0,
         storageKey: dto.storageKey,
@@ -87,6 +89,8 @@ export class VideosService {
       data: {
         ...(dto.title && { title: dto.title.trim() }),
         ...(dto.description !== undefined && { description: dto.description?.trim() }),
+        ...(dto.thumbnailUrl !== undefined && { thumbnailUrl: dto.thumbnailUrl }),
+        ...(dto.isFreePreview !== undefined && { isFreePreview: dto.isFreePreview }),
         ...(dto.order !== undefined && { order: dto.order }),
         ...(dto.duration !== undefined && { duration: dto.duration }),
         ...(dto.storageKey && { storageKey: dto.storageKey }),
@@ -132,7 +136,7 @@ export class VideosService {
     return { message: 'Video successfully removed' };
   }
 
-  async findOne(id: string, user: AuthUser) {
+  async findOne(id: string, user?: AuthUser) {
     const video = await this.prisma.video.findUnique({
       where: { id },
       include: {
@@ -158,7 +162,7 @@ export class VideosService {
   async streamVideo(
     videoId: string,
     rangeHeader: string | undefined,
-    user: AuthUser,
+    user: AuthUser | undefined,
     res: Response,
   ) {
     const video = await this.prisma.video.findUnique({
@@ -202,7 +206,21 @@ export class VideosService {
     streamResult.stream.pipe(res);
   }
 
-  private async assertAccess(courseId: string, videoId: string, user: AuthUser) {
+  private async assertAccess(courseId: string, videoId: string, user?: AuthUser) {
+    const video = await this.prisma.video.findUnique({
+      where: { id: videoId },
+      select: { isFreePreview: true, order: true },
+    });
+
+    // If marked as free preview or first lesson, allow anyone (including guests) to watch!
+    if (video && (video.isFreePreview || video.order === 0 || video.order === 1)) {
+      return;
+    }
+
+    if (!user) {
+      throw new ForbiddenException('Authentication required to stream this video');
+    }
+
     if (user.role === Role.ADMIN) {
       return;
     }

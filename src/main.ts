@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import * as express from 'express';
+import * as path from 'path';
 import { AppModule } from './app.module';
 
 // Support BigInt serialization in JSON
@@ -30,6 +32,12 @@ async function bootstrap() {
 
   // Cookie Parser
   app.use(cookieParser());
+
+  // Serve public thumbnails (images only)
+  app.use(
+    '/uploads/thumbnails',
+    express.static(path.join(process.cwd(), 'uploads', 'thumbnails')),
+  );
 
   // Dynamic Strict CORS
   const configuredOrigins = [

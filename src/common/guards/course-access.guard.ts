@@ -15,10 +15,34 @@ export class CourseAccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user = request.user as AuthUser;
+    const user = request.user as AuthUser | undefined;
+
+    // Determine target courseId and videoId
+    const params = request.params;
+    let courseId = params.courseId;
+    const videoId = params.videoId || (request.url.includes('/videos/') ? params.id : undefined);
+
+    // If videoId is provided, check if it's a Free Preview video (or first lesson)
+    if (videoId) {
+      const video = await this.prisma.video.findUnique({
+        where: { id: videoId },
+        select: { courseId: true, isFreePreview: true, order: true },
+      });
+
+      if (!video) {
+        throw new NotFoundException('Video not found');
+      }
+
+      // If video is marked as free preview or first lesson, allow public / anyone to stream!
+      if (video.isFreePreview || video.order === 0 || video.order === 1) {
+        return true;
+      }
+
+      courseId = video.courseId;
+    }
 
     if (!user) {
-      throw new ForbiddenException('Authentication required');
+      throw new ForbiddenException('Authentication required to access non-preview course videos');
     }
 
     // Admins bypass course access restrictions
@@ -26,25 +50,7 @@ export class CourseAccessGuard implements CanActivate {
       return true;
     }
 
-    // Determine target courseId and videoId
-    const params = request.params;
-    let courseId = params.courseId;
-    const videoId = params.videoId || (request.url.includes('/videos/') ? params.id : undefined);
-
-    if (videoId && !courseId) {
-      const video = await this.prisma.video.findUnique({
-        where: { id: videoId },
-        select: { courseId: true },
-      });
-
-      if (!video) {
-        throw new NotFoundException('Video not found');
-      }
-      courseId = video.courseId;
-    }
-
     if (!courseId) {
-      // If endpoint is not course-specific, allow
       return true;
     }
 
