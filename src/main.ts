@@ -33,10 +33,17 @@ async function bootstrap() {
   // Cookie Parser
   app.use(cookieParser());
 
-  // Serve public thumbnails (images only)
+  // Serve public thumbnails (images only) with remote fallback for local dev
   app.use(
     '/uploads/thumbnails',
     express.static(path.join(process.cwd(), 'uploads', 'thumbnails')),
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      // If local dev missing the thumbnail, redirect to Railway production
+      if (!isProduction && req.path) {
+        return res.redirect(`https://lms-backend-production-40b7da73.up.railway.app/uploads/thumbnails${req.path}`);
+      }
+      next();
+    },
   );
 
   // Dynamic Strict CORS
