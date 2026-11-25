@@ -16,6 +16,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { AccessRequestsModule } from './modules/access-requests/access-requests.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { CompilerModule } from './modules/compiler/compiler.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -51,6 +52,7 @@ import { AppController } from './app.controller';
     AuditLogModule,
     AccessRequestsModule,
     ChatModule,
+    CompilerModule,
   ],
   controllers: [AppController],
   providers: [
