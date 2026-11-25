@@ -16,6 +16,14 @@ const LANGUAGE_COMPILER_MAP: Record<string, CompilerConfig> = {
   go: { compiler: 'go-1.27.4' },
 };
 
+const CODAPI_SANDBOX_MAP: Record<string, { sandbox: string; filename: string }> = {
+  c: { sandbox: 'gcc', filename: 'main.c' },
+  cpp: { sandbox: 'cpp', filename: 'main.cpp' },
+  python: { sandbox: 'python', filename: 'main.py' },
+  rust: { sandbox: 'rust', filename: 'main.rs' },
+  go: { sandbox: 'go', filename: 'main.go' },
+};
+
 export interface ExecutionResult {
   success: boolean;
   output: string;
@@ -28,6 +36,49 @@ export interface ExecutionResult {
 @Injectable()
 export class CompilerService {
   private readonly logger = new Logger(CompilerService.name);
+
+  private async executeViaCodapi(language: string, code: string): Promise<ExecutionResult | null> {
+    const map = CODAPI_SANDBOX_MAP[language];
+    if (!map) return null;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch('https://api.codapi.org/v1/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sandbox: map.sandbox,
+          command: 'run',
+          files: {
+            [map.filename]: code,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      if (typeof data.ok !== 'boolean') return null;
+
+      const output = data.stdout || '';
+      const error = data.stderr || '';
+
+      return {
+        success: data.ok && !error,
+        output: output + (output && !output.endsWith('\n') ? '\n' : ''),
+        error: error || undefined,
+        exitCode: data.ok ? 0 : 1,
+        executionTimeMs: data.duration || 500,
+      };
+    } catch {
+      return null;
+    }
+  }
 
   async executeCode(dto: ExecuteCodeDto): Promise<ExecutionResult> {
     const config = LANGUAGE_COMPILER_MAP[dto.language];
@@ -43,6 +94,15 @@ export class CompilerService {
 
     const startTime = Date.now();
 
+    // 1. High-Speed Codapi Execution Path (<1s)
+    if (!dto.stdin && CODAPI_SANDBOX_MAP[dto.language]) {
+      const codapiRes = await this.executeViaCodapi(dto.language, dto.code);
+      if (codapiRes) {
+        return codapiRes;
+      }
+    }
+
+    // 2. Wandbox Fallback Path
     try {
       const payload: Record<string, any> = {
         compiler: config.compiler,
@@ -55,7 +115,7 @@ export class CompilerService {
       }
 
       const controller = new AbortController();
-      const timeoutMs = dto.language === 'rust' ? 25000 : 15000;
+      const timeoutMs = 35000;
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch('https://wandbox.org/api/compile.json', {
@@ -101,7 +161,7 @@ export class CompilerService {
         output: '',
         error:
           err.name === 'AbortError'
-            ? 'Execution timed out (Time Limit Exceeded - 15s).'
+            ? 'Execution timed out (Time Limit Exceeded - 35s).'
             : `Execution error: ${err?.message || 'Failed to connect to compiler service'}`,
         exitCode: 1,
         executionTimeMs,
