@@ -17,6 +17,7 @@ export const envSchema = z.object({
   HEARTBEAT_THROTTLE_LIMIT: z.coerce.number().default(30),
   MAX_FAILED_LOGIN_ATTEMPTS: z.coerce.number().default(5),
   LOCKOUT_DURATION_MINUTES: z.coerce.number().default(15),
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
